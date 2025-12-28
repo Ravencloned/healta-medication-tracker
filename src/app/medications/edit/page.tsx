@@ -7,6 +7,16 @@ import { loadMedications, saveMedications } from "@/lib/storage";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const inputStyle = {
+  width: "100%",
+  padding: "0.5rem",
+  marginTop: "0.25rem",
+  borderRadius: "6px",
+  border: "1px solid #444",
+  backgroundColor: "#111",
+  color: "#fff",
+};
+
 export default function EditMedicationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,7 +26,7 @@ export default function EditMedicationPage() {
   const [dosage, setDosage] = useState("");
   const [times, setTimes] = useState("08:00");
   const [days, setDays] = useState<string[]>([]);
-  const [stock, setStock] = useState(0);
+  const [stock, setStock] = useState<string>(""); // 👈 FIXED
 
   useEffect(() => {
     if (!editId) return;
@@ -29,7 +39,7 @@ export default function EditMedicationPage() {
     setDosage(med.dosage || "");
     setTimes(med.times.join(", "));
     setDays(med.days || []);
-    setStock(med.remainingStock);
+    setStock(String(med.remainingStock)); // 👈 preload
   }, [editId]);
 
   function toggleDay(day: string) {
@@ -41,7 +51,8 @@ export default function EditMedicationPage() {
   }
 
   function handleSave() {
-    if (!name || stock <= 0) return;
+    const stockNumber = Number(stock);
+    if (!name || isNaN(stockNumber) || stockNumber <= 0) return;
 
     const medications = loadMedications();
 
@@ -54,12 +65,11 @@ export default function EditMedicationPage() {
               dosage: dosage || undefined,
               times: times.split(",").map((t) => t.trim()),
               days: days.length > 0 ? days : undefined,
-              remainingStock: stock,
-              totalStock: Math.max(m.totalStock, stock),
+              remainingStock: stockNumber,
+              totalStock: Math.max(m.totalStock, stockNumber),
             }
           : m
       );
-
       saveMedications(updated);
     } else {
       const newMedication: Medication = {
@@ -68,11 +78,10 @@ export default function EditMedicationPage() {
         dosage: dosage || undefined,
         times: times.split(",").map((t) => t.trim()),
         days: days.length > 0 ? days : undefined,
-        totalStock: stock,
-        remainingStock: stock,
+        totalStock: stockNumber,
+        remainingStock: stockNumber,
         lowStockThreshold: 3,
       };
-
       saveMedications([...medications, newMedication]);
     }
 
@@ -80,22 +89,23 @@ export default function EditMedicationPage() {
   }
 
   return (
-    <main style={{ padding: "2rem" }}>
+    <main style={{ padding: "2rem", maxWidth: "600px" }}>
       <h1>{editId ? "Edit Medication" : "Add Medication"}</h1>
 
-      <div>
-        <label>Name *</label><br />
-        <input value={name} onChange={(e) => setName(e.target.value)} />
+      <div style={{ marginTop: "1rem" }}>
+        <label>Name *</label>
+        <input style={inputStyle} value={name} onChange={(e) => setName(e.target.value)} />
       </div>
 
-      <div>
-        <label>Dosage</label><br />
-        <input value={dosage} onChange={(e) => setDosage(e.target.value)} />
+      <div style={{ marginTop: "1rem" }}>
+        <label>Dosage</label>
+        <input style={inputStyle} value={dosage} onChange={(e) => setDosage(e.target.value)} />
       </div>
 
-      <div>
-        <label>Times per day</label><br />
+      <div style={{ marginTop: "1rem" }}>
+        <label>Times per day</label>
         <input
+          style={inputStyle}
           value={times}
           onChange={(e) => setTimes(e.target.value)}
           placeholder="08:00, 20:00"
@@ -104,7 +114,7 @@ export default function EditMedicationPage() {
 
       <div style={{ marginTop: "1rem" }}>
         <label>Days (optional)</label>
-        <div>
+        <div style={{ marginTop: "0.5rem" }}>
           {WEEKDAYS.map((day) => (
             <label key={day} style={{ marginRight: "0.75rem" }}>
               <input
@@ -120,11 +130,13 @@ export default function EditMedicationPage() {
       </div>
 
       <div style={{ marginTop: "1rem" }}>
-        <label>Stock *</label><br />
+        <label>Stock *</label>
         <input
           type="number"
+          style={inputStyle}
           value={stock}
-          onChange={(e) => setStock(Number(e.target.value))}
+          onChange={(e) => setStock(e.target.value)}
+          placeholder="Enter total stock"
         />
       </div>
 
